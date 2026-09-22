@@ -1,29 +1,14 @@
 # Examen: Base de datos SST/PESV en PostgreSQL
 
-Este documento recoge el estado completo del examen: la base de datos (tablas y datos de prueba), y las respuestas a cada bloque de consultas, indicando cuáles ya están resueltas y cuáles faltan.
+Este documento reúne el desarrollo completo del examen: la estructura de la base de datos (tablas y datos de prueba) y las soluciones de cada bloque de consultas, señalando qué está resuelto y qué queda pendiente.
 
 **Conexión:**
+
 ```
 psql -h postgres_db -p 5432 -U bkseducate -d trabajo
 ```
 
----
-
-## Estado general
-
-| Sección | Estado |
-|---|---|
-| Tablas (modelo físico) | ✅ Completado |
-| Datos de prueba | ✅ Completado |
-| 1. Consultas SQL básicas (15) | ✅ Completado |
-| 2. Consultas SQL intermedias (20) | ✅ Completado |
-| 3. Consultas SQL avanzadas (25) | ✅ Completado |
-| 4. Consultas de vistas y vistas materializadas (8) | ✅ Completado |
-| 5. Procedimientos almacenados (15) | ✅ Completado |
-| 6. Funciones almacenadas (8) | ✅ Completado |
-| 7. Triggers (15) | ✅ Completado |
-
----
+------
 
 ## Tablas (modelo físico)
 
@@ -182,7 +167,7 @@ CREATE TABLE tenant_audit (
 );
 ```
 
----
+------
 
 ## Datos de prueba
 
@@ -296,113 +281,130 @@ INSERT INTO editing_locks (tenanttemplate_id, locked_by, locked_at, expires_at, 
 (3, 2, NOW(), NOW() + INTERVAL '30 minutes', TRUE);
 ```
 
-**Nota:** en el desarrollo también se insertaron más países de referencia (México, Argentina, Chile, Perú, Ecuador, Venezuela, Brasil, Estados Unidos, España, Panamá) y un documento adicional de prueba para Constructora Andes al validar el `REFRESH MATERIALIZED VIEW`, opcional para el examen.
-
----
+------
 
 ## 1. Consultas SQL básicas ✅
 
-**1. Todos los registros de `tenants`**
+**1. Listado completo de `tenants`**
+
 ```sql
 SELECT * FROM tenants;
 ```
 
-**2. Nombre, correo y teléfono de las organizaciones**
+**2. Nombre, correo y teléfono de cada organización**
+
 ```sql
 SELECT name, contact_email, contact_phone FROM tenants;
 ```
 
-**3. Nombres, apellidos y correo de las personas**
+**3. Nombre, apellido y correo de cada persona**
+
 ```sql
 SELECT first_name, last_name, email FROM persons;
 ```
 
-**4. Personas activas**
+**4. Personas que se encuentran activas**
+
 ```sql
 SELECT * FROM persons WHERE status = TRUE;
 ```
 
-**5. Organizaciones cuyo nombre contenga una palabra**
+**5. Organizaciones cuyo nombre incluye cierta palabra**
+
 ```sql
 SELECT * FROM tenants WHERE name ILIKE '%Andes%';
 ```
 
-**6. Países ordenados alfabéticamente**
+**6. Países en orden alfabético**
+
 ```sql
 SELECT * FROM countries ORDER BY name ASC;
 ```
 
-**7. Departamentos de un país determinado**
+**7. Departamentos pertenecientes a un país puntual**
+
 ```sql
 SELECT * FROM departments WHERE country_id = 1;
 ```
 
-**8. Ciudades de un departamento específico**
+**8. Ciudades pertenecientes a un departamento puntual**
+
 ```sql
 SELECT * FROM cities WHERE department_id = 1;
 ```
 
-**9. Cargos ordenados por descripción**
+**9. Cargos ordenados alfabéticamente por su descripción**
+
 ```sql
 SELECT * FROM positions ORDER BY description ASC;
 ```
 
-**10. Personas de una organización según `tenant_id`**
+**10. Personas que pertenecen a una organización según `tenant_id`**
+
 ```sql
 SELECT * FROM persons WHERE tenant_id = 1;
 ```
 
-**11. Organizaciones activas**
+**11. Organizaciones que están activas**
+
 ```sql
 SELECT * FROM tenants WHERE status = TRUE;
 ```
 
-**12. Organizaciones registradas en un rango de fechas**
+**12. Organizaciones creadas dentro de un rango de fechas**
+
 ```sql
 SELECT * FROM tenants WHERE created_at BETWEEN '2024-01-01' AND '2024-12-31';
 ```
 
-**13. Tamaños de empresa**
+**13. Listado de tamaños de empresa**
+
 ```sql
 SELECT * FROM tenant_sizes;
 ```
 
-**14. Tipos de sistemas SST**
+**14. Listado de tipos de sistema SST**
+
 ```sql
 SELECT * FROM type_system_sst;
 ```
 
-**15. Módulos con título, descripción y orden**
+**15. Módulos con su título, descripción y orden de despliegue**
+
 ```sql
 SELECT title, description, display_order FROM modules ORDER BY display_order;
 ```
 
----
+------
 
 ## 2. Consultas SQL intermedias ✅
 
-**1. Personas con el nombre de su organización**
+**1. Cada persona junto al nombre de su organización**
+
 ```sql
 SELECT personas.first_name || ' ' || personas.last_name AS nombre_completo, organizaciones.name AS nombre_organizacion
 FROM persons AS personas
 JOIN tenants AS organizaciones ON organizaciones.id = personas.tenant_id;
 ```
 
-**2. Personas con su cargo**
+**2. Cada persona junto a su cargo**
+
 ```sql
 SELECT personas.first_name || ' ' || personas.last_name AS nombre_completo, cargos.description AS cargo
 FROM persons AS personas
 JOIN positions AS cargos ON cargos.id = personas.position_id;
 ```
 
-**3. Organizaciones con su tamaño de empresa**
+**3. Cada organización junto a su tamaño de empresa**
+
 ```sql
 SELECT organizaciones.name AS nombre_organizacion, tamanos.name AS tamano_empresa
 FROM tenants AS organizaciones
 JOIN tenant_sizes AS tamanos ON tamanos.id = organizaciones.tenant_size_id;
 ```
 
-**4. Organizaciones con ciudad, departamento y país**
+**4. Organizaciones con su ciudad, departamento y país**
+
 ```sql
 SELECT organizaciones.name AS nombre_organizacion, ciudades.name AS ciudad, departamentos.name AS departamento, paises.name AS pais
 FROM tenants AS organizaciones
@@ -411,7 +413,8 @@ JOIN departments AS departamentos ON departamentos.id = ciudades.department_id
 JOIN countries AS paises ON paises.id = departamentos.country_id;
 ```
 
-**5. Total de personas por organización**
+**5. Cantidad de personas que tiene cada organización**
+
 ```sql
 SELECT organizaciones.name AS nombre_organizacion, COUNT(personas.id) AS total_personas
 FROM tenants AS organizaciones
@@ -419,7 +422,8 @@ LEFT JOIN persons AS personas ON personas.tenant_id = organizaciones.id
 GROUP BY organizaciones.name;
 ```
 
-**6. Organizaciones con más de 2 personas**
+**6. Organizaciones que superan las 2 personas registradas**
+
 ```sql
 SELECT organizaciones.name AS nombre_organizacion, COUNT(personas.id) AS total_personas
 FROM tenants AS organizaciones
@@ -428,7 +432,8 @@ GROUP BY organizaciones.name
 HAVING COUNT(personas.id) > 2;
 ```
 
-**7. Organización y módulo asignado**
+**7. Organización junto al módulo que tiene asignado**
+
 ```sql
 SELECT organizaciones.name AS nombre_organizacion, modulos.title AS nombre_modulo
 FROM tenant_modules AS modulos_organizacion
@@ -436,7 +441,8 @@ JOIN tenants AS organizaciones ON organizaciones.id = modulos_organizacion.tenan
 JOIN modules AS modulos ON modulos.id = modulos_organizacion.module_id;
 ```
 
-**8. Total de módulos por organización**
+**8. Cantidad de módulos asignados por organización**
+
 ```sql
 SELECT organizaciones.name AS nombre_organizacion, COUNT(modulos_organizacion.module_id) AS total_modulos
 FROM tenants AS organizaciones
@@ -444,7 +450,8 @@ JOIN tenant_modules AS modulos_organizacion ON modulos_organizacion.tenant_id = 
 GROUP BY organizaciones.name;
 ```
 
-**9. Sistemas SST habilitados por organización**
+**9. Sistemas SST habilitados en cada organización**
+
 ```sql
 SELECT organizacion.name AS nombre_organizacion, sst.name AS sistema_sst
 FROM tenantsystems AS sistema_organizacion
@@ -452,21 +459,24 @@ JOIN tenants AS organizacion ON organizacion.id = sistema_organizacion.tenant_id
 JOIN type_system_sst AS sst ON sst.id = sistema_organizacion.system_id;
 ```
 
-**10. Módulos junto con el sistema SST al que pertenecen**
+**10. Módulos junto al sistema SST al que corresponden**
+
 ```sql
 SELECT modulo.title AS nombre_modulo, sst.name AS sistema_sst
 FROM modules AS modulo
 JOIN type_system_sst AS sst ON sst.id = modulo.system_id;
 ```
 
-**11. Formatos con su módulo**
+**11. Formatos junto a su módulo correspondiente**
+
 ```sql
 SELECT formatos.name AS nombre_formato, modulos.title AS nombre_modulo
 FROM formats_sst AS formatos
 JOIN modules AS modulos ON modulos.id = formatos.module_id;
 ```
 
-**12. Total de formatos por módulo**
+**12. Cantidad de formatos que tiene cada módulo**
+
 ```sql
 SELECT modulos.title AS nombre_modulo, COUNT(formatos.id) AS total_formatos
 FROM modules AS modulos
@@ -474,7 +484,8 @@ JOIN formats_sst AS formatos ON formatos.module_id = modulos.id
 GROUP BY modulos.title;
 ```
 
-**13. Plantillas asignadas con su organización**
+**13. Plantillas asignadas junto a su organización**
+
 ```sql
 SELECT organizaciones.name AS nombre_organizacion, plantillas.name AS nombre_plantilla
 FROM tenanttemplates AS plantillas_organizacion
@@ -482,7 +493,8 @@ JOIN tenants AS organizaciones ON organizaciones.id = plantillas_organizacion.te
 JOIN templates AS plantillas ON plantillas.id = plantillas_organizacion.template_id;
 ```
 
-**14. Plantilla, organización, sistema SST y etapa PHVA**
+**14. Plantilla junto a organización, sistema SST y etapa PHVA**
+
 ```sql
 SELECT plantilla.name AS nombre_plantilla, organizacion.name AS nombre_organizacion, sst.name AS sistema_sst, phva.name AS etapa_phva
 FROM tenanttemplates AS plantilla_organizacion
@@ -492,7 +504,8 @@ JOIN type_system_sst AS sst ON sst.id = plantilla_organizacion.system_id
 JOIN phva_stages AS phva ON phva.id = plantilla_organizacion.phva_stage_id;
 ```
 
-**15. Total de plantillas por organización**
+**15. Cantidad de plantillas que tiene cada organización**
+
 ```sql
 SELECT organizaciones.name AS nombre_organizacion, COUNT(plantillas_organizacion.id) AS total_plantillas
 FROM tenants AS organizaciones
@@ -500,7 +513,8 @@ JOIN tenanttemplates AS plantillas_organizacion ON plantillas_organizacion.tenan
 GROUP BY organizaciones.name;
 ```
 
-**16. Organizaciones sin personas registradas**
+**16. Organizaciones que todavía no tienen personas registradas**
+
 ```sql
 SELECT organizacion.name AS nombre_organizacion
 FROM tenants AS organizacion
@@ -508,7 +522,8 @@ LEFT JOIN persons AS persona ON persona.tenant_id = organizacion.id
 WHERE persona.id IS NULL;
 ```
 
-**17. Módulos no asignados a ninguna organización**
+**17. Módulos que no están asignados a ninguna organización**
+
 ```sql
 SELECT modulo.title AS nombre_modulo
 FROM modules AS modulo
@@ -516,7 +531,8 @@ LEFT JOIN tenant_modules AS modulos_organizacion ON modulos_organizacion.module_
 WHERE modulos_organizacion.id IS NULL;
 ```
 
-**18. Total de plantillas por etapa PHVA**
+**18. Cantidad de plantillas agrupadas por etapa PHVA**
+
 ```sql
 SELECT phva.name AS etapas_phva, COUNT(plantilla.id) AS plantillas_totales
 FROM phva_stages AS phva
@@ -524,7 +540,8 @@ LEFT JOIN templates AS plantilla ON plantilla.phva_stage_id = phva.id
 GROUP BY phva.name;
 ```
 
-**19. Organizaciones registradas por ciudad**
+**19. Cantidad de organizaciones agrupadas por ciudad**
+
 ```sql
 SELECT ciudad.name AS ciudad, COUNT(organizacion.id) AS organizaciones_totales
 FROM cities AS ciudad
@@ -532,7 +549,8 @@ LEFT JOIN tenants AS organizacion ON organizacion.city_id = ciudad.id
 GROUP BY ciudad.name;
 ```
 
-**20. Total de personas por organización y cargo**
+**20. Cantidad de personas agrupadas por organización y cargo**
+
 ```sql
 SELECT organizaciones.name AS nombre_organizacion, cargos.description AS cargo, COUNT(personas.id) AS total_personas
 FROM tenants AS organizaciones
@@ -541,11 +559,12 @@ JOIN positions AS cargos ON cargos.id = personas.position_id
 GROUP BY organizaciones.name, cargos.description;
 ```
 
----
+------
 
 ## 3. Consultas SQL avanzadas ✅
 
-**1. Organización con más personas registradas**
+**1. Organización con la mayor cantidad de personas registradas**
+
 ```sql
 SELECT organizacion.name AS nombre_organizacion, COUNT(persona.id) AS total_personas
 FROM tenants AS organizacion
@@ -555,7 +574,8 @@ ORDER BY total_personas DESC
 LIMIT 1;
 ```
 
-**2. Organizaciones con personas por encima del promedio general**
+**2. Organizaciones con más personas que el promedio general**
+
 ```sql
 SELECT organizacion.name AS nombre_organizacion, COUNT(persona.id) AS total_personas
 FROM tenants AS organizacion
@@ -572,7 +592,8 @@ HAVING COUNT(persona.id) > (
 );
 ```
 
-**3. Organizaciones con todos los módulos de un sistema SST determinado**
+**3. Organizaciones que cubren todos los módulos de un sistema SST puntual**
+
 ```sql
 SELECT organizacion.name AS nombre_organizacion
 FROM tenants AS organizacion
@@ -589,7 +610,8 @@ HAVING COUNT(DISTINCT modulo.id) = (
 );
 ```
 
-**4. Organizaciones con al menos un módulo pero sin plantillas asignadas**
+**4. Organizaciones que tienen algún módulo pero ninguna plantilla asignada**
+
 ```sql
 SELECT DISTINCT organizacion.name AS nombre_organizacion
 FROM tenants AS organizacion
@@ -598,7 +620,8 @@ LEFT JOIN tenanttemplates AS plantilla_organizacion ON plantilla_organizacion.te
 WHERE plantilla_organizacion.id IS NULL;
 ```
 
-**5. Organizaciones con plantillas en todas las etapas PHVA**
+**5. Organizaciones que cubren las cuatro etapas PHVA en sus plantillas**
+
 ```sql
 SELECT organizacion.name AS nombre_organizacion
 FROM tenants AS organizacion
@@ -607,7 +630,8 @@ GROUP BY organizacion.id, organizacion.name
 HAVING COUNT(DISTINCT plantilla_organizacion.phva_stage_id) = (SELECT COUNT(*) FROM phva_stages);
 ```
 
-**6. Plantillas asignadas por organización discriminadas por etapa PHVA**
+**6. Plantillas por organización desglosadas según la etapa PHVA**
+
 ```sql
 SELECT organizacion.name AS nombre_organizacion, etapa_phva.name AS etapa_phva, COUNT(plantilla_organizacion.id) AS total_plantillas
 FROM tenanttemplates AS plantilla_organizacion
@@ -616,7 +640,8 @@ JOIN phva_stages AS etapa_phva ON etapa_phva.id = plantilla_organizacion.phva_st
 GROUP BY organizacion.name, etapa_phva.name;
 ```
 
-**7. Cantidad de plantillas por etapa en columnas independientes**
+**7. Cantidad de plantillas por etapa, cada una en su propia columna**
+
 ```sql
 SELECT organizacion.name AS nombre_organizacion,
        COUNT(*) FILTER (WHERE etapa_phva.name = 'Planear') AS planear,
@@ -629,7 +654,8 @@ JOIN phva_stages AS etapa_phva ON etapa_phva.id = plantilla_organizacion.phva_st
 GROUP BY organizacion.name;
 ```
 
-**8. Porcentaje que representa cada etapa PHVA sobre el total de plantillas**
+**8. Participación porcentual de cada etapa PHVA sobre el total de plantillas**
+
 ```sql
 SELECT organizacion.name AS nombre_organizacion, etapa_phva.name AS etapa_phva,
        COUNT(plantilla_organizacion.id) AS total_plantillas,
@@ -640,7 +666,8 @@ JOIN phva_stages AS etapa_phva ON etapa_phva.id = plantilla_organizacion.phva_st
 GROUP BY organizacion.id, organizacion.name, etapa_phva.name;
 ```
 
-**9. Etapa PHVA con mayor cantidad de plantillas por organización**
+**9. Etapa PHVA predominante dentro de cada organización**
+
 ```sql
 SELECT nombre_organizacion, etapa_phva, total_plantillas
 FROM (
@@ -655,21 +682,24 @@ FROM (
 WHERE posicion = 1;
 ```
 
-**10. Porcentaje de documentos finalizados frente al total (vista de resumen)**
+**10. Proporción de documentos finalizados frente al total (usando la vista resumen)**
+
 ```sql
 SELECT nombre_organizacion, total_documentos, finalizados,
        ROUND(100.0 * finalizados / NULLIF(total_documentos, 0), 2) AS porcentaje_cumplimiento
 FROM vm_tenant_docs_summary;
 ```
 
-**11. Organizaciones con cumplimiento por debajo del promedio general**
+**11. Organizaciones cuyo cumplimiento está por debajo del promedio general**
+
 ```sql
 SELECT nombre_organizacion, porcentaje_cumplimiento
 FROM vm_tenant_docs_summary
 WHERE porcentaje_cumplimiento < (SELECT AVG(porcentaje_cumplimiento) FROM vm_tenant_docs_summary);
 ```
 
-**12. Clasificación del cumplimiento en bajo, medio y alto**
+**12. Categorización del cumplimiento en bajo, medio y alto**
+
 ```sql
 SELECT nombre_organizacion, porcentaje_cumplimiento,
        CASE
@@ -680,21 +710,24 @@ SELECT nombre_organizacion, porcentaje_cumplimiento,
 FROM vm_tenant_docs_summary;
 ```
 
-**13. Ranking de organizaciones según su cumplimiento documental**
+**13. Posición de cada organización según su nivel de cumplimiento**
+
 ```sql
 SELECT nombre_organizacion, porcentaje_cumplimiento,
        RANK() OVER (ORDER BY porcentaje_cumplimiento DESC) AS posicion_ranking
 FROM vm_tenant_docs_summary;
 ```
 
-**14. Cumplimiento y diferencia respecto al promedio general**
+**14. Diferencia del cumplimiento de cada organización frente al promedio general**
+
 ```sql
 SELECT nombre_organizacion, porcentaje_cumplimiento,
        ROUND(porcentaje_cumplimiento - AVG(porcentaje_cumplimiento) OVER (), 2) AS diferencia_respecto_promedio
 FROM vm_tenant_docs_summary;
 ```
 
-**15. Cantidad acumulada de documentos finalizados por organización**
+**15. Conteo acumulado de documentos finalizados por organización**
+
 ```sql
 SELECT organizacion.name AS nombre_organizacion, plantilla_organizacion.assigned_at AS fecha_asignacion,
        SUM(CASE WHEN plantilla_organizacion.status = 'finalizado' THEN 1 ELSE 0 END)
@@ -704,7 +737,8 @@ JOIN tenants AS organizacion ON organizacion.id = plantilla_organizacion.tenant_
 ORDER BY organizacion.name, plantilla_organizacion.assigned_at;
 ```
 
-**16. Organizaciones que comparten municipio con distinto tamaño empresarial**
+**16. Parejas de organizaciones en el mismo municipio con distinto tamaño empresarial**
+
 ```sql
 SELECT organizacion_uno.name AS organizacion_uno, organizacion_dos.name AS organizacion_dos, ciudad.name AS municipio
 FROM tenants AS organizacion_uno
@@ -713,7 +747,8 @@ JOIN cities AS ciudad ON ciudad.id = organizacion_uno.city_id
 WHERE organizacion_uno.tenant_size_id <> organizacion_dos.tenant_size_id;
 ```
 
-**17. Personas cuyo cargo es ocupado por más personas que el promedio de ocupación en su organización**
+**17. Personas en cargos con más ocupación que el promedio de su organización**
+
 ```sql
 SELECT persona.first_name AS nombre, persona.last_name AS apellido, cargo.description AS cargo
 FROM persons AS persona
@@ -731,7 +766,8 @@ JOIN (
 WHERE ocupacion_cargo.personas_en_cargo > promedio_organizacion.promedio_ocupacion;
 ```
 
-**18. CTE: personas por organización, filtrando las que superan el promedio**
+**18. CTE: organizaciones con más personas que el promedio**
+
 ```sql
 WITH personas_por_organizacion AS (
     SELECT organizacion.id AS tenant_id, organizacion.name AS nombre_organizacion, COUNT(persona.id) AS total_personas
@@ -744,7 +780,8 @@ FROM personas_por_organizacion
 WHERE total_personas > (SELECT AVG(total_personas) FROM personas_por_organizacion);
 ```
 
-**19. CTE: consolidar módulos, plantillas y personas por organización**
+**19. CTE: consolidado de módulos, plantillas y personas por organización**
+
 ```sql
 WITH resumen_organizacion AS (
     SELECT organizacion.id AS tenant_id, organizacion.name AS nombre_organizacion,
@@ -760,7 +797,8 @@ WITH resumen_organizacion AS (
 SELECT * FROM resumen_organizacion;
 ```
 
-**20. Organizaciones sin alguna etapa PHVA configurada en sus plantillas**
+**20. Organizaciones a las que les falta alguna etapa PHVA en sus plantillas**
+
 ```sql
 SELECT organizacion.name AS nombre_organizacion, etapa_phva.name AS etapa_faltante
 FROM tenants AS organizacion
@@ -772,7 +810,8 @@ WHERE plantilla_organizacion.id IS NULL
   AND EXISTS (SELECT 1 FROM tenanttemplates WHERE tenant_id = organizacion.id);
 ```
 
-**21. Última fecha de actualización por organización considerando sus plantillas**
+**21. Fecha de la última actualización de plantillas por organización**
+
 ```sql
 SELECT organizacion.name AS nombre_organizacion, MAX(plantilla_organizacion.updated_at) AS ultima_actualizacion
 FROM tenants AS organizacion
@@ -780,7 +819,8 @@ JOIN tenanttemplates AS plantilla_organizacion ON plantilla_organizacion.tenant_
 GROUP BY organizacion.name;
 ```
 
-**22. Organizaciones con registros pendientes usando las vistas SST y PESV**
+**22. Organizaciones con pendientes, cruzando las vistas de SST y PESV**
+
 ```sql
 SELECT COALESCE(resumen_sst.nombre_organizacion, resumen_pesv.nombre_organizacion) AS nombre_organizacion,
        resumen_sst.pendientes AS pendientes_sst,
@@ -790,13 +830,15 @@ FULL JOIN vm_template_pesv_docs_summary AS resumen_pesv ON resumen_pesv.tenant_i
 WHERE COALESCE(resumen_sst.pendientes, 0) > 0 OR COALESCE(resumen_pesv.pendientes, 0) > 0;
 ```
 
-**23. Informe consolidado por organización**
+**23. Reporte consolidado por organización**
+
 ```sql
 SELECT nombre_organizacion, total_documentos, finalizados, borrador, no_iniciados, pendientes, porcentaje_cumplimiento
 FROM vm_tenant_docs_summary;
 ```
 
-**24. Comparar cumplimiento SST vs PESV con diferencia superior a un valor**
+**24. Comparativo de cumplimiento SST contra PESV, con brecha mayor a un umbral**
+
 ```sql
 SELECT COALESCE(resumen_sst.nombre_organizacion, resumen_pesv.nombre_organizacion) AS nombre_organizacion,
        resumen_sst.porcentaje_cumplimiento AS cumplimiento_sst,
@@ -807,7 +849,8 @@ FULL JOIN vm_template_pesv_docs_summary AS resumen_pesv ON resumen_pesv.tenant_i
 WHERE ABS(COALESCE(resumen_sst.porcentaje_cumplimiento, 0) - COALESCE(resumen_pesv.porcentaje_cumplimiento, 0)) > 20;
 ```
 
-**25. Vista que consolide personas, módulos, plantillas y sistemas por organización**
+**25. Vista que agrupa personas, módulos, plantillas y sistemas por organización**
+
 ```sql
 CREATE VIEW vw_tenant_resumen_general AS
 SELECT organizacion.id AS tenant_id, organizacion.name AS nombre_organizacion,
@@ -823,13 +866,14 @@ LEFT JOIN tenantsystems AS sistema_organizacion ON sistema_organizacion.tenant_i
 GROUP BY organizacion.id, organizacion.name;
 ```
 
----
+------
 
 ## 4. Consultas orientadas a vistas y vistas materializadas ✅
 
 **1. Vista `vw_tenant_persons`**
 
-**Qué hace:** por cada persona registrada, muestra el nombre de su organización, su nombre completo y su cargo, en una sola fila ya lista para reportes.
+**Para qué sirve:** por cada persona registrada, presenta en una sola fila el nombre de su organización, su nombre completo y su cargo, ya lista para usarse en reportes.
+
 ```sql
 CREATE VIEW vw_tenant_persons AS
 SELECT organizacion.name AS nombre_organizacion,
@@ -839,15 +883,19 @@ FROM tenants AS organizacion
 JOIN persons AS persona ON persona.tenant_id = organizacion.id
 LEFT JOIN positions AS cargo ON cargo.id = persona.position_id;
 ```
-**Cómo comprobarla:** una vez creada, se consulta igual que una tabla:
+
+**Cómo verificarla:** una vez creada, se consulta igual que cualquier tabla:
+
 ```sql
 SELECT * FROM vw_tenant_persons;
 ```
-Debe devolver una fila por persona (13 en el dataset), con su organización y cargo ya resueltos, sin que tengas que escribir el `JOIN` cada vez.
+
+Debe devolver una fila por persona (13 en el conjunto de datos), con su organización y cargo ya resueltos, sin necesidad de escribir el `JOIN` en cada consulta.
 
 **2. Vista de información geográfica**
 
-**Qué hace:** resuelve la cadena completa ciudad → departamento → país para cada organización, sin tener que repetir esos 3 `JOIN` cada vez que se necesite la ubicación.
+**Para qué sirve:** resuelve de una vez la cadena ciudad → departamento → país para cada organización, evitando repetir esos tres `JOIN` cada vez que se necesite la ubicación.
+
 ```sql
 CREATE VIEW vw_tenant_ubicacion_geografica AS
 SELECT organizacion.name AS nombre_organizacion,
@@ -859,15 +907,19 @@ LEFT JOIN cities AS ciudad ON ciudad.id = organizacion.city_id
 LEFT JOIN departments AS departamento ON departamento.id = ciudad.department_id
 LEFT JOIN countries AS pais ON pais.id = departamento.country_id;
 ```
-**Cómo comprobarla:**
+
+**Cómo verificarla:**
+
 ```sql
 SELECT * FROM vw_tenant_ubicacion_geografica;
 ```
-Debe salir una fila por organización (6 en el dataset) mostrando su municipio, departamento y país, por ejemplo "Constructora Andes S.A.S | Medellín | Antioquia | Colombia".
+
+Debe salir una fila por organización (6 en el conjunto de datos) con su municipio, departamento y país, por ejemplo "Constructora Andes S.A.S | Medellín | Antioquia | Colombia".
 
 **3. Vista de módulos habilitados por organización y su sistema SST**
 
-**Qué hace:** lista, para cada organización, qué módulos tiene activados y a qué sistema (SG-SST o PESV) pertenece cada uno.
+**Para qué sirve:** muestra, para cada organización, qué módulos tiene activos y a qué sistema (SG-SST o PESV) pertenece cada uno.
+
 ```sql
 CREATE VIEW vw_tenant_modulos_sistema AS
 SELECT organizacion.name AS nombre_organizacion,
@@ -878,15 +930,19 @@ JOIN tenants AS organizacion ON organizacion.id = modulo_organizacion.tenant_id
 JOIN modules AS modulo ON modulo.id = modulo_organizacion.module_id
 JOIN type_system_sst AS sistema_sst ON sistema_sst.id = modulo.system_id;
 ```
-**Cómo comprobarla:**
+
+**Cómo verificarla:**
+
 ```sql
 SELECT * FROM vw_tenant_modulos_sistema ORDER BY nombre_organizacion;
 ```
-"Transportes del Valle Ltda" debe aparecer con "Plan de acción vial" y "Diagnóstico vial" (sistema PESV) además de "Política SST" (sistema SG-SST).
+
+"Transportes del Valle Ltda" debe listarse con "Plan de acción vial" y "Diagnóstico vial" (sistema PESV), además de "Política SST" (sistema SG-SST).
 
 **4. Vista de cantidad de plantillas por organización y etapa PHVA**
 
-**Qué hace:** cuenta cuántas plantillas tiene asignadas cada organización, agrupadas por etapa PHVA (Planear, Hacer, Verificar, Actuar).
+**Para qué sirve:** cuenta cuántas plantillas tiene asignadas cada organización, agrupadas por etapa PHVA (Planear, Hacer, Verificar, Actuar).
+
 ```sql
 CREATE VIEW vw_tenant_plantillas_por_etapa AS
 SELECT organizacion.name AS nombre_organizacion,
@@ -897,15 +953,19 @@ JOIN tenants AS organizacion ON organizacion.id = plantilla_organizacion.tenant_
 JOIN phva_stages AS etapa_phva ON etapa_phva.id = plantilla_organizacion.phva_stage_id
 GROUP BY organizacion.name, etapa_phva.name;
 ```
-**Cómo comprobarla:**
+
+**Cómo verificarla:**
+
 ```sql
 SELECT * FROM vw_tenant_plantillas_por_etapa ORDER BY nombre_organizacion, etapa_phva;
 ```
-"Constructora Andes S.A.S" debe mostrar las 4 etapas (Planear, Hacer, Verificar, Actuar), porque es la organización que armamos con las 4 etapas completas.
 
-**5. Vista de total de personas por organización y cargo**
+"Constructora Andes S.A.S" debe mostrar las 4 etapas (Planear, Hacer, Verificar, Actuar), ya que es la organización armada con el conjunto completo.
 
-**Qué hace:** cuenta cuántas personas ocupan cada cargo, dentro de cada organización.
+**5. Vista de cantidad de personas por organización y cargo**
+
+**Para qué sirve:** cuenta cuántas personas ocupan cada cargo dentro de cada organización.
+
 ```sql
 CREATE VIEW vw_tenant_personas_por_cargo AS
 SELECT organizacion.name AS nombre_organizacion,
@@ -916,15 +976,19 @@ JOIN tenants AS organizacion ON organizacion.id = persona.tenant_id
 JOIN positions AS cargo ON cargo.id = persona.position_id
 GROUP BY organizacion.name, cargo.description;
 ```
-**Cómo comprobarla:**
+
+**Cómo verificarla:**
+
 ```sql
 SELECT * FROM vw_tenant_personas_por_cargo WHERE nombre_organizacion = 'Constructora Andes S.A.S';
 ```
-Debe mostrar "Operario" con 3 personas (Luis, Sofía y Andrés), y "Gerente General" y "Coordinador SST" con 1 cada uno.
+
+Debe mostrar "Operario" con 3 personas (Luis, Sofía y Andrés), y "Gerente General" junto con "Coordinador SST" con 1 cada uno.
 
 **6. Vista materializada de resumen documental por organización**
 
-**Qué hace:** precalcula, por organización, el total de documentos y cuántos están en cada estado (finalizado, borrador, no iniciado, pendiente), junto con el porcentaje de cumplimiento. A diferencia de una vista normal, guarda los datos físicamente y no se recalcula sola (ver punto 7).
+**Para qué sirve:** precalcula, por organización, el total de documentos y cuántos hay en cada estado (finalizado, borrador, no iniciado, pendiente), junto con el porcentaje de cumplimiento. A diferencia de una vista común, guarda los datos físicamente y no se actualiza sola (ver el punto 7).
+
 ```sql
 CREATE MATERIALIZED VIEW vm_tenant_docs_summary AS
 SELECT organizacion.id AS tenant_id,
@@ -940,7 +1004,7 @@ LEFT JOIN tenanttemplates AS plantilla_organizacion ON plantilla_organizacion.te
 GROUP BY organizacion.id, organizacion.name;
 ```
 
-Adicionalmente, para las consultas 22 y 24 de la sección 3 se necesitan estas dos vistas materializadas por sistema:
+Además, las consultas 22 y 24 de la sección 3 requieren estas dos vistas materializadas segmentadas por sistema:
 
 ```sql
 CREATE MATERIALIZED VIEW vm_template_sst_docs_summary AS
@@ -965,23 +1029,29 @@ JOIN tenanttemplates AS plantilla_organizacion ON plantilla_organizacion.tenant_
 JOIN type_system_sst AS sistema_sst ON sistema_sst.id = plantilla_organizacion.system_id AND sistema_sst.name = 'PESV'
 GROUP BY organizacion.id, organizacion.name;
 ```
-**Cómo comprobarlas:**
+
+**Cómo verificarlas:**
+
 ```sql
 SELECT * FROM vm_tenant_docs_summary;
 SELECT * FROM vm_template_sst_docs_summary;
 SELECT * FROM vm_template_pesv_docs_summary;
 ```
-Cada una debe traer una fila por organización (o solo las que tienen ese sistema, en el caso de las dos últimas) con sus conteos y porcentaje ya calculados. Probado: "Constructora Andes S.A.S" salió con 5 documentos, 3 finalizados, 60% de cumplimiento en `vm_tenant_docs_summary`.
 
-**7. Refrescar la vista materializada y verificar el cambio**
+Cada una debe traer una fila por organización (o únicamente las que cuentan con ese sistema, para las dos últimas) con sus conteos y porcentaje ya calculados. En la prueba, "Constructora Andes S.A.S" mostró 5 documentos, 3 finalizados y 60% de cumplimiento en `vm_tenant_docs_summary`.
 
-**Qué hace:** demuestra la diferencia clave entre una vista normal y una materializada: la materializada no se actualiza sola cuando cambian los datos base, hay que decírselo explícitamente con `REFRESH MATERIALIZED VIEW`.
+**7. Actualizar la vista materializada y confirmar el cambio**
+
+**Para qué sirve:** demuestra la diferencia central entre una vista normal y una materializada: la materializada no se pone al día sola cuando cambian los datos base, hay que pedírselo explícitamente con `REFRESH MATERIALIZED VIEW`.
+
 ```sql
 REFRESH MATERIALIZED VIEW vm_tenant_docs_summary;
 
 SELECT * FROM vm_tenant_docs_summary WHERE tenant_id = 1;
 ```
-**Cómo comprobarlo:** se hace en 4 pasos, en este orden:
+
+**Cómo verificarlo:** se hace en 4 pasos, en este orden:
+
 ```sql
 -- 1. Consultar el valor actual
 SELECT * FROM vm_tenant_docs_summary WHERE tenant_id = 1;
@@ -990,40 +1060,46 @@ SELECT * FROM vm_tenant_docs_summary WHERE tenant_id = 1;
 INSERT INTO tenanttemplates (tenant_id, template_id, system_id, phva_stage_id, format_id, status)
 VALUES (1, 6, 2, 1, 4, 'finalizado');
 
--- 3. Consultar SIN refrescar (todavía debe mostrar el valor viejo)
+-- 3. Consultar SIN refrescar (debe mostrar aún el valor anterior)
 SELECT * FROM vm_tenant_docs_summary WHERE tenant_id = 1;
 
 -- 4. Refrescar y consultar de nuevo (ya debe reflejar el cambio)
 REFRESH MATERIALIZED VIEW vm_tenant_docs_summary;
 SELECT * FROM vm_tenant_docs_summary WHERE tenant_id = 1;
 ```
-Lo probé así: antes del `INSERT`, Constructora Andes mostraba 5 documentos / 60%. Después del `INSERT` pero antes del `REFRESH`, seguía en 5 / 60% (dato desactualizado). Después del `REFRESH`, pasó a 6 documentos / 66.67% (ya actualizado).
 
-**8. Índices recomendados para la vista materializada**
+Así se comprobó: antes del `INSERT`, Constructora Andes marcaba 5 documentos / 60%. Después del `INSERT` pero antes del `REFRESH`, seguía en 5 / 60% (dato desactualizado). Tras el `REFRESH`, pasó a 6 documentos / 66.67% (dato al día).
 
-**Qué hace:** acelera las consultas que filtran por organización o que ordenan/comparan por porcentaje de cumplimiento, en lugar de recorrer toda la vista fila por fila.
+**8. Índices sugeridos para la vista materializada**
+
+**Para qué sirve:** agiliza las consultas que filtran por organización o que ordenan/comparan según el porcentaje de cumplimiento, evitando recorrer toda la vista fila por fila.
+
 ```sql
 CREATE UNIQUE INDEX idx_vm_tenant_docs_summary_tenant_id ON vm_tenant_docs_summary(tenant_id);
 CREATE INDEX idx_vm_tenant_docs_summary_cumplimiento ON vm_tenant_docs_summary(porcentaje_cumplimiento);
 ```
-- `tenant_id` como índice único: cada organización aparece una sola vez y casi toda consulta de seguimiento filtra por una organización puntual. Además habilita `REFRESH MATERIALIZED VIEW CONCURRENTLY`.
-- `porcentaje_cumplimiento`: se usa constantemente para ordenar (ranking) o comparar contra el promedio.
 
-**Cómo comprobar que el índice existe y se usa:**
+- `tenant_id` como índice único: cada organización aparece una sola vez y la mayoría de consultas de seguimiento filtran por una organización específica. Además, habilita `REFRESH MATERIALIZED VIEW CONCURRENTLY`.
+- `porcentaje_cumplimiento`: se emplea con frecuencia para ordenar (ranking) o comparar contra el promedio.
+
+**Cómo comprobar que el índice existe y se está usando:**
+
 ```sql
 \d vm_tenant_docs_summary
 
 EXPLAIN SELECT * FROM vm_tenant_docs_summary WHERE tenant_id = 1;
 ```
-El `\d` debe listar los dos índices creados, y el `EXPLAIN` debe mostrar `Index Scan using idx_vm_tenant_docs_summary_tenant_id` en vez de un recorrido secuencial (`Seq Scan`) cuando la tabla crezca lo suficiente.
 
----
+El `\d` debe mostrar los dos índices creados, y el `EXPLAIN` debe indicar `Index Scan using idx_vm_tenant_docs_summary_tenant_id` en lugar de un recorrido secuencial (`Seq Scan`) una vez la tabla crezca lo suficiente.
+
+------
 
 ## 5. Procedimientos almacenados ✅
 
-**Orden de creación:** las funciones de la sección 6 deben crearse primero, porque el procedimiento 12 y el trigger 11 dependen de `fn_porcentaje_cumplimiento`.
+**Orden de creación:** las funciones de la sección 6 deben crearse antes, ya que el procedimiento 12 y el trigger 11 dependen de `fn_porcentaje_cumplimiento`.
 
-**1. Registrar organización (valida NIT duplicado)**
+**1. Registrar una organización (valida que el NIT no esté duplicado)**
+
 ```sql
 CREATE OR REPLACE PROCEDURE sp_registrar_organizacion(
     p_name VARCHAR,
@@ -1045,9 +1121,11 @@ BEGIN
 END;
 $$;
 ```
-Prueba: `CALL sp_registrar_organizacion('Prueba Uno S.A.S', '900000001-1', 'prueba@uno.com', '3000000001', 1, 1);` y luego repetirla con el mismo NIT lanza `ERROR: Ya existe una organización registrada con el NIT 900000001-1`.
 
-**2. Registrar persona y asociarla a organización y cargo**
+Ejemplo de prueba: `CALL sp_registrar_organizacion('Prueba Uno S.A.S', '900000001-1', 'prueba@uno.com', '3000000001', 1, 1);` y al repetirlo con el mismo NIT arroja `ERROR: Ya existe una organización registrada con el NIT 900000001-1`.
+
+**2. Registrar una persona y vincularla a su organización y cargo**
+
 ```sql
 CREATE OR REPLACE PROCEDURE sp_registrar_persona(
     p_tenant_id INTEGER,
@@ -1075,7 +1153,8 @@ END;
 $$;
 ```
 
-**3. Cambiar estado activa/inactiva**
+**3. Cambiar el estado activa/inactiva de una organización**
+
 ```sql
 CREATE OR REPLACE PROCEDURE sp_cambiar_estado_organizacion(p_tenant_id INTEGER, p_nuevo_estado BOOLEAN)
 LANGUAGE plpgsql
@@ -1090,7 +1169,8 @@ END;
 $$;
 ```
 
-**4. Asignar módulo evitando duplicados**
+**4. Asignar un módulo evitando duplicados**
+
 ```sql
 CREATE OR REPLACE PROCEDURE sp_asignar_modulo(p_tenant_id INTEGER, p_module_id INTEGER)
 LANGUAGE plpgsql
@@ -1105,7 +1185,8 @@ END;
 $$;
 ```
 
-**5. Habilitar sistema SST**
+**5. Habilitar un sistema SST**
+
 ```sql
 CREATE OR REPLACE PROCEDURE sp_habilitar_sistema(p_tenant_id INTEGER, p_system_id INTEGER)
 LANGUAGE plpgsql
@@ -1120,7 +1201,8 @@ END;
 $$;
 ```
 
-**6. Asignar plantilla a organización (sistema, etapa PHVA y formato)**
+**6. Asignar una plantilla a una organización (sistema, etapa PHVA y formato)**
+
 ```sql
 CREATE OR REPLACE PROCEDURE sp_asignar_plantilla(
     p_tenant_id INTEGER,
@@ -1138,7 +1220,8 @@ END;
 $$;
 ```
 
-**7. Cambiar el cargo de una persona (validando que el cargo sea de su misma organización)**
+**7. Cambiar el cargo de una persona (verificando que sea de su misma organización)**
+
 ```sql
 CREATE OR REPLACE PROCEDURE sp_cambiar_cargo_persona(p_person_id INTEGER, p_new_position_id INTEGER)
 LANGUAGE plpgsql
@@ -1161,7 +1244,8 @@ END;
 $$;
 ```
 
-**8. Trasladar persona de una organización a otra**
+**8. Trasladar a una persona de una organización a otra**
+
 ```sql
 CREATE OR REPLACE PROCEDURE sp_trasladar_persona(p_person_id INTEGER, p_new_tenant_id INTEGER, p_new_position_id INTEGER)
 LANGUAGE plpgsql
@@ -1187,7 +1271,8 @@ END;
 $$;
 ```
 
-**9. Deshabilitar módulos de una organización inactiva**
+**9. Deshabilitar los módulos de una organización que está inactiva**
+
 ```sql
 CREATE OR REPLACE PROCEDURE sp_deshabilitar_modulos_organizacion_inactiva(p_tenant_id INTEGER)
 LANGUAGE plpgsql
@@ -1210,9 +1295,10 @@ END;
 $$;
 ```
 
-**10. Eliminar asignación de módulo validando dependientes**
+**10. Eliminar una asignación de módulo validando sus dependientes**
 
-Se valida contra `evaluations`, ya que esa tabla depende directamente de la combinación organización + módulo.
+Se valida contra `evaluations`, porque esa tabla depende directamente de la combinación organización + módulo.
+
 ```sql
 CREATE OR REPLACE PROCEDURE sp_eliminar_asignacion_modulo(p_tenant_id INTEGER, p_module_id INTEGER)
 LANGUAGE plpgsql
@@ -1233,7 +1319,8 @@ END;
 $$;
 ```
 
-**11. Total de plantillas de una organización con `RAISE NOTICE`**
+**11. Cantidad de plantillas de una organización mostrada con `RAISE NOTICE`**
+
 ```sql
 CREATE OR REPLACE PROCEDURE sp_total_plantillas_organizacion(p_tenant_id INTEGER)
 LANGUAGE plpgsql
@@ -1246,9 +1333,11 @@ BEGIN
 END;
 $$;
 ```
-Prueba: `CALL sp_total_plantillas_organizacion(1);` → `NOTICE: La organización 1 tiene 6 plantillas asignadas`.
+
+Ejemplo de prueba: `CALL sp_total_plantillas_organizacion(1);` → `NOTICE: La organización 1 tiene 6 plantillas asignadas`.
 
 **12. Porcentaje de cumplimiento a partir de finalizados y pendientes (parámetro de salida)**
+
 ```sql
 CREATE OR REPLACE PROCEDURE sp_porcentaje_cumplimiento_organizacion(
     p_tenant_id INTEGER,
@@ -1274,9 +1363,11 @@ BEGIN
 END;
 $$;
 ```
-Se invoca como `CALL sp_porcentaje_cumplimiento_organizacion(1, NULL);` (el `NULL` es obligatorio como marcador del parámetro `OUT`).
 
-**13. Total de documentos por organización y etapa PHVA (parámetro de salida)**
+Se invoca así: `CALL sp_porcentaje_cumplimiento_organizacion(1, NULL);` (el `NULL` es obligatorio como marcador del parámetro `OUT`).
+
+**13. Cantidad de documentos por organización y etapa PHVA (parámetro de salida)**
+
 ```sql
 CREATE OR REPLACE PROCEDURE sp_total_documentos_por_etapa(
     p_tenant_id INTEGER,
@@ -1293,7 +1384,8 @@ END;
 $$;
 ```
 
-**14. Modificar datos de contacto y registrar fecha de actualización**
+**14. Actualizar los datos de contacto y registrar la fecha del cambio**
+
 ```sql
 CREATE OR REPLACE PROCEDURE sp_actualizar_contacto_organizacion(
     p_tenant_id INTEGER,
@@ -1317,6 +1409,7 @@ $$;
 ```
 
 **15. Manejo de excepciones al asignar plantillas**
+
 ```sql
 CREATE OR REPLACE PROCEDURE sp_asignar_plantilla_segura(
     p_tenant_id INTEGER,
@@ -1344,13 +1437,15 @@ BEGIN
 END;
 $$;
 ```
-Prueba con organización inexistente (999): en vez de abortar la sesión con un error crudo, imprime `NOTICE: Error: alguno de los identificadores enviados no existe...`.
 
----
+Prueba con una organización inexistente (999): en lugar de abortar la sesión con un error sin control, imprime `NOTICE: Error: alguno de los identificadores enviados no existe...`.
+
+------
 
 ## 6. Funciones almacenadas ✅
 
-**1. Total de personas por organización**
+**1. Cantidad de personas por organización**
+
 ```sql
 CREATE OR REPLACE FUNCTION fn_total_personas_organizacion(p_tenant_id INTEGER)
 RETURNS INTEGER
@@ -1364,9 +1459,11 @@ BEGIN
 END;
 $$;
 ```
+
 Uso: `SELECT fn_total_personas_organizacion(1);`
 
 **2. Porcentaje de cumplimiento documental**
+
 ```sql
 CREATE OR REPLACE FUNCTION fn_porcentaje_cumplimiento(p_tenant_id INTEGER)
 RETURNS NUMERIC
@@ -1389,7 +1486,8 @@ END;
 $$;
 ```
 
-**3. ¿Organización tiene un módulo habilitado? (booleano)**
+**3. Verificar si una organización tiene un módulo habilitado (booleano)**
+
 ```sql
 CREATE OR REPLACE FUNCTION fn_tiene_modulo_habilitado(p_tenant_id INTEGER, p_module_id INTEGER)
 RETURNS BOOLEAN
@@ -1403,7 +1501,8 @@ END;
 $$;
 ```
 
-**4. Nombre completo de una persona**
+**4. Obtener el nombre completo de una persona**
+
 ```sql
 CREATE OR REPLACE FUNCTION fn_nombre_completo_persona(p_person_id INTEGER)
 RETURNS VARCHAR
@@ -1420,7 +1519,8 @@ END;
 $$;
 ```
 
-**5. Total de plantillas por organización y etapa PHVA**
+**5. Cantidad de plantillas por organización y etapa PHVA**
+
 ```sql
 CREATE OR REPLACE FUNCTION fn_total_plantillas_por_etapa(p_tenant_id INTEGER, p_phva_stage_id INTEGER)
 RETURNS INTEGER
@@ -1438,7 +1538,8 @@ END;
 $$;
 ```
 
-**6. Función tabular: módulos habilitados para una organización**
+**6. Función tabular: módulos habilitados de una organización**
+
 ```sql
 CREATE OR REPLACE FUNCTION fn_modulos_organizacion(p_tenant_id INTEGER)
 RETURNS TABLE(modulo_id INTEGER, nombre_modulo VARCHAR, sistema_sst VARCHAR)
@@ -1454,11 +1555,13 @@ BEGIN
 END;
 $$;
 ```
+
 Uso: `SELECT * FROM fn_modulos_organizacion(1);`
 
-**7. Función tabular: personas de una organización con sus cargos**
+**7. Función tabular: personas de una organización con su cargo**
 
-Nota: `first_name || ' ' || last_name` produce el tipo `text`, por eso la columna de salida se declara como `TEXT` (no `VARCHAR`) para que coincida exactamente.
+Nota: `first_name || ' ' || last_name` genera el tipo `text`, por eso la columna de salida se declara como `TEXT` (y no como `VARCHAR`) para que coincida exactamente.
+
 ```sql
 CREATE OR REPLACE FUNCTION fn_personas_organizacion(p_tenant_id INTEGER)
 RETURNS TABLE(persona_id INTEGER, nombre_completo TEXT, cargo VARCHAR)
@@ -1473,9 +1576,11 @@ BEGIN
 END;
 $$;
 ```
+
 Uso: `SELECT * FROM fn_personas_organizacion(1);`
 
-**8. Clasificar nivel de cumplimiento (bajo, medio, alto)**
+**8. Clasificar el nivel de cumplimiento (bajo, medio, alto)**
+
 ```sql
 CREATE OR REPLACE FUNCTION fn_clasificar_cumplimiento(p_tenant_id INTEGER)
 RETURNS VARCHAR
@@ -1497,15 +1602,16 @@ END;
 $$;
 ```
 
----
+------
 
 ## 7. Triggers ✅
 
-**Nota importante:** los triggers 1 y 2 (actualizar `updated_at` en `tenants` y `persons`) ya se habían creado en la sección de tablas, reutilizando la función genérica `set_updated_at()`. El trigger 14 (fecha + usuario responsable en `tenanttemplates`) reemplaza al trigger genérico de `updated_at` que existía en esa tabla, porque hace ambas tareas a la vez (ver detalle más abajo). Por eso el trigger 7 no se implementa por separado: queda cubierto por el 14.
+**Aclaración:** los triggers 1 y 2 (actualización de `updated_at` en `tenants` y `persons`) se crearon desde la sección de tablas, reutilizando la función genérica `set_updated_at()`. El trigger 14 (fecha + usuario responsable en `tenanttemplates`) sustituye al trigger genérico de `updated_at` que tenía esa tabla, porque cumple ambas funciones a la vez (ver el detalle más abajo). Por esa razón, el trigger 7 no se implementa aparte: queda cubierto por el 14.
 
-**1 y 2. `updated_at` automático (ya creados)**
+**1 y 2. `updated_at` automático (ya implementados)**
 
-**Qué hacen:** cada vez que se modifica una fila de `tenants` o de `persons`, ponen automáticamente `updated_at = NOW()`, sin que el desarrollador tenga que acordarse de hacerlo en cada `UPDATE`.
+**Para qué sirven:** cada vez que se modifica una fila de `tenants` o de `persons`, dejan `updated_at = NOW()` de forma automática, sin que el desarrollador deba recordarlo en cada `UPDATE`.
+
 ```sql
 CREATE OR REPLACE FUNCTION set_updated_at()
 RETURNS TRIGGER AS $$
@@ -1523,7 +1629,9 @@ CREATE TRIGGER trg_persons_updated_at
 BEFORE UPDATE ON persons
 FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 ```
-**Cómo comprobarlos:**
+
+**Cómo verificarlos:**
+
 ```sql
 UPDATE tenants SET contact_phone = '3000000000' WHERE id = 2;
 SELECT id, contact_phone, updated_at FROM tenants WHERE id = 2;
@@ -1531,11 +1639,13 @@ SELECT id, contact_phone, updated_at FROM tenants WHERE id = 2;
 UPDATE persons SET last_name = 'Ramírez Actualizado' WHERE id = 1;
 SELECT id, last_name, updated_at FROM persons WHERE id = 1;
 ```
-En ambos casos `updated_at` debe cambiar al momento exacto del `UPDATE`, aunque la instrucción no haya tocado esa columna explícitamente.
 
-**3. Impedir registrar persona en organización inactiva**
+En ambos casos, `updated_at` debe reflejar el momento exacto del `UPDATE`, aun cuando la instrucción no haya tocado esa columna de forma explícita.
 
-**Qué hace:** antes de insertar una persona, revisa si la organización a la que se quiere asociar está inactiva; si lo está, cancela la operación.
+**3. Impedir el registro de personas en una organización inactiva**
+
+**Para qué sirve:** antes de insertar una persona, revisa si la organización a la que se va a asociar está inactiva; si lo está, cancela la operación.
+
 ```sql
 CREATE OR REPLACE FUNCTION fn_validar_organizacion_activa_persona()
 RETURNS TRIGGER
@@ -1558,16 +1668,20 @@ CREATE TRIGGER trg_persons_organizacion_activa
 BEFORE INSERT ON persons
 FOR EACH ROW EXECUTE FUNCTION fn_validar_organizacion_activa_persona();
 ```
-**Cómo comprobarlo:**
+
+**Cómo verificarlo:**
+
 ```sql
 -- Textiles Bogotá (tenant_id = 4) está inactiva → debe fallar
 INSERT INTO persons (tenant_id, first_name, last_name, email) VALUES (4, 'X', 'Y', 'x.y@test.com');
 ```
+
 Debe lanzar: `ERROR: No se puede registrar una persona en una organización inactiva (tenant_id = 4)`.
 
-**4. Impedir asignar un módulo ya asignado**
+**4. Impedir asignar dos veces el mismo módulo**
 
-**Qué hace:** antes de insertar una fila en `tenant_modules`, revisa si esa combinación organización + módulo ya existe, y si es así, cancela la operación con un mensaje claro (en vez de dejar que falle con el error genérico de la restricción `UNIQUE`).
+**Para qué sirve:** antes de insertar una fila en `tenant_modules`, revisa si esa combinación organización + módulo ya existe y, de ser así, cancela la operación con un mensaje claro (en vez de dejar que falle con el error genérico de la restricción `UNIQUE`).
+
 ```sql
 CREATE OR REPLACE FUNCTION fn_validar_modulo_no_duplicado()
 RETURNS TRIGGER
@@ -1588,16 +1702,20 @@ CREATE TRIGGER trg_tenant_modules_no_duplicados
 BEFORE INSERT ON tenant_modules
 FOR EACH ROW EXECUTE FUNCTION fn_validar_modulo_no_duplicado();
 ```
-**Cómo comprobarlo:**
+
+**Cómo verificarlo:**
+
 ```sql
 -- Constructora Andes (tenant_id = 1) ya tiene el módulo 1 asignado → debe fallar
 INSERT INTO tenant_modules (tenant_id, module_id) VALUES (1, 1);
 ```
+
 Debe lanzar: `ERROR: El módulo 1 ya se encuentra asignado a la organización 1`.
 
 **5. Impedir asignar plantillas a organizaciones inactivas**
 
-**Qué hace:** igual que el trigger 3, pero para `tenanttemplates`: si la organización está inactiva, no deja crear el documento.
+**Para qué sirve:** funciona igual que el trigger 3, pero aplicado a `tenanttemplates`: si la organización está inactiva, no permite crear el documento.
+
 ```sql
 CREATE OR REPLACE FUNCTION fn_validar_organizacion_activa_plantilla()
 RETURNS TRIGGER
@@ -1620,16 +1738,20 @@ CREATE TRIGGER trg_tenanttemplates_organizacion_activa
 BEFORE INSERT ON tenanttemplates
 FOR EACH ROW EXECUTE FUNCTION fn_validar_organizacion_activa_plantilla();
 ```
-**Cómo comprobarlo:**
+
+**Cómo verificarlo:**
+
 ```sql
 -- Textiles Bogotá (tenant_id = 4) está inactiva → debe fallar
 INSERT INTO tenanttemplates (tenant_id, template_id, system_id, phva_stage_id, format_id) VALUES (4, 1, 1, 1, 1);
 ```
+
 Debe lanzar: `ERROR: No se pueden asignar plantillas a una organización inactiva (tenant_id = 4)`.
 
-**6. Validar que el cargo de una persona pertenezca a su misma organización**
+**6. Validar que el cargo de una persona corresponda a su misma organización**
 
-**Qué hace:** al insertar o actualizar una persona, revisa que el `position_id` que se le asigna pertenezca a la misma organización de esa persona (no al cargo de otra empresa).
+**Para qué sirve:** al insertar o actualizar una persona, comprueba que el `position_id` asignado pertenezca a la misma organización de esa persona (y no al cargo de otra empresa).
+
 ```sql
 CREATE OR REPLACE FUNCTION fn_validar_cargo_misma_organizacion()
 RETURNS TRIGGER
@@ -1654,20 +1776,24 @@ CREATE TRIGGER trg_persons_cargo_misma_organizacion
 BEFORE INSERT OR UPDATE ON persons
 FOR EACH ROW EXECUTE FUNCTION fn_validar_cargo_misma_organizacion();
 ```
-**Cómo comprobarlo:**
+
+**Cómo verificarlo:**
+
 ```sql
 -- Persona 1 (Carlos, de la organización 1) intenta tomar el cargo 4 (que es de la organización 2) → debe fallar
 UPDATE persons SET position_id = 4 WHERE id = 1;
 ```
+
 Debe lanzar: `ERROR: El cargo 4 no pertenece a la organización 1 de la persona`.
 
 **7. Fecha de actualización al modificar una plantilla asignada**
 
-Cubierto por el trigger 14 (más abajo), que registra `updated_at` y `updated_by` en un solo trigger.
+Queda cubierto por el trigger 14 (más abajo), que registra `updated_at` y `updated_by` en un solo trigger.
 
-**8. Impedir eliminar organización con personas asociadas**
+**8. Impedir eliminar una organización que tiene personas asociadas**
 
-**Qué hace:** antes de borrar una organización, revisa si todavía tiene personas registradas; si las tiene, no deja eliminarla (protege contra pérdida accidental de datos relacionados).
+**Para qué sirve:** antes de borrar una organización, revisa si todavía tiene personas registradas; si es así, bloquea la eliminación (protege contra pérdida accidental de datos relacionados).
+
 ```sql
 CREATE OR REPLACE FUNCTION fn_impedir_eliminar_organizacion_con_personas()
 RETURNS TRIGGER
@@ -1686,16 +1812,20 @@ CREATE TRIGGER trg_tenants_no_eliminar_con_personas
 BEFORE DELETE ON tenants
 FOR EACH ROW EXECUTE FUNCTION fn_impedir_eliminar_organizacion_con_personas();
 ```
-**Cómo comprobarlo:**
+
+**Cómo verificarlo:**
+
 ```sql
 -- Constructora Andes (tenant_id = 1) tiene 5 personas → debe fallar
 DELETE FROM tenants WHERE id = 1;
 ```
+
 Debe lanzar: `ERROR: No se puede eliminar la organización 1: todavía tiene personas asociadas`.
 
-**9. Impedir eliminar sistema SST en uso**
+**9. Impedir eliminar un sistema SST que está en uso**
 
-**Qué hace:** antes de borrar un registro de `type_system_sst`, revisa si alguna organización lo tiene habilitado (en `tenantsystems`); si es así, no deja eliminarlo.
+**Para qué sirve:** antes de borrar un registro de `type_system_sst`, revisa si alguna organización lo tiene habilitado (en `tenantsystems`); si es así, bloquea la eliminación.
+
 ```sql
 CREATE OR REPLACE FUNCTION fn_impedir_eliminar_sistema_en_uso()
 RETURNS TRIGGER
@@ -1714,16 +1844,20 @@ CREATE TRIGGER trg_type_system_sst_no_eliminar_en_uso
 BEFORE DELETE ON type_system_sst
 FOR EACH ROW EXECUTE FUNCTION fn_impedir_eliminar_sistema_en_uso();
 ```
-**Cómo comprobarlo:**
+
+**Cómo verificarlo:**
+
 ```sql
 -- SG-SST (id = 1) está habilitado para varias organizaciones → debe fallar
 DELETE FROM type_system_sst WHERE id = 1;
 ```
+
 Debe lanzar: `ERROR: No se puede eliminar el sistema SG-SST: existen organizaciones que lo tienen habilitado`.
 
-**10. Impedir eliminar módulo asignado**
+**10. Impedir eliminar un módulo que está asignado**
 
-**Qué hace:** antes de borrar un módulo, revisa si alguna organización lo tiene asignado (en `tenant_modules`); si es así, no deja eliminarlo.
+**Para qué sirve:** antes de borrar un módulo, revisa si alguna organización lo tiene asignado (en `tenant_modules`); si es así, bloquea la eliminación.
+
 ```sql
 CREATE OR REPLACE FUNCTION fn_impedir_eliminar_modulo_asignado()
 RETURNS TRIGGER
@@ -1742,18 +1876,22 @@ CREATE TRIGGER trg_modules_no_eliminar_asignados
 BEFORE DELETE ON modules
 FOR EACH ROW EXECUTE FUNCTION fn_impedir_eliminar_modulo_asignado();
 ```
-**Cómo comprobarlo:**
+
+**Cómo verificarlo:**
+
 ```sql
 -- El módulo 1 (Política SST) está asignado a varias organizaciones → debe fallar
 DELETE FROM modules WHERE id = 1;
 ```
+
 Debe lanzar: `ERROR: No se puede eliminar el módulo Política SST: está asignado a una o más organizaciones`.
 
-**11. Validar que el porcentaje de cumplimiento esté entre 0 y 100**
+**11. Validar que el porcentaje de cumplimiento quede entre 0 y 100**
 
-**Qué hace:** es una validación de "sanidad" (defensive programming): cada vez que se inserta o actualiza un documento, recalcula el cumplimiento de esa organización y verifica que el número tenga sentido (entre 0 y 100). En condiciones normales nunca debería dispararse, pero protege contra errores de cálculo si la fórmula cambia en el futuro.
+**Para qué sirve:** es una comprobación de sanidad (defensive programming): cada vez que se inserta o actualiza un documento, recalcula el cumplimiento de esa organización y verifica que el número tenga sentido (entre 0 y 100). En condiciones normales nunca debería activarse, pero protege contra errores de cálculo si la fórmula cambia más adelante.
 
 Se ejecuta después de insertar o actualizar un documento, recalcula el cumplimiento de la organización con `fn_porcentaje_cumplimiento` (sección 6) y verifica que el resultado esté en el rango permitido. Requiere que la función de la sección 6 ya exista.
+
 ```sql
 CREATE OR REPLACE FUNCTION fn_validar_rango_cumplimiento()
 RETURNS TRIGGER
@@ -1776,17 +1914,21 @@ CREATE TRIGGER trg_tenanttemplates_validar_cumplimiento
 AFTER INSERT OR UPDATE ON tenanttemplates
 FOR EACH ROW EXECUTE FUNCTION fn_validar_rango_cumplimiento();
 ```
-**Cómo comprobarlo:**
+
+**Cómo verificarlo:**
+
 ```sql
 -- Caso normal: no debe fallar, porque el resultado siempre cae entre 0 y 100
 INSERT INTO tenanttemplates (tenant_id, template_id, system_id, phva_stage_id, format_id, status)
 VALUES (5, 1, 1, 1, 1, 'finalizado');
 ```
-Como el cálculo interno de `fn_porcentaje_cumplimiento` siempre produce un valor entre 0 y 100, este `INSERT` simplemente funciona sin error — lo que demuestra que la validación pasa correctamente en el caso normal (no hay forma de forzar un valor fuera de rango sin romper la fórmula misma).
+
+Como el cálculo interno de `fn_porcentaje_cumplimiento` siempre arroja un valor entre 0 y 100, este `INSERT` simplemente se ejecuta sin error, lo que confirma que la validación pasa correctamente en el caso normal (no hay forma de forzar un valor fuera de rango sin alterar la fórmula misma).
 
 **12. Auditar modificaciones a los datos principales de una organización**
 
-**Qué hace:** cada vez que se actualiza una organización, compara campo por campo (`name`, `nit`, `contact_email`, `contact_phone`, `tenant_size_id`, `city_id`) el valor anterior contra el nuevo, y guarda una fila en `tenant_audit` por cada campo que realmente haya cambiado.
+**Para qué sirve:** cada vez que se actualiza una organización, compara campo por campo (`name`, `nit`, `contact_email`, `contact_phone`, `tenant_size_id`, `city_id`) el valor anterior contra el nuevo, y guarda una fila en `tenant_audit` por cada campo que realmente haya cambiado.
+
 ```sql
 CREATE OR REPLACE FUNCTION fn_auditar_cambios_organizacion()
 RETURNS TRIGGER
@@ -1831,16 +1973,20 @@ CREATE TRIGGER trg_tenants_auditar_cambios
 AFTER UPDATE ON tenants
 FOR EACH ROW EXECUTE FUNCTION fn_auditar_cambios_organizacion();
 ```
-**Cómo comprobarlo:**
+
+**Cómo verificarlo:**
+
 ```sql
 UPDATE tenants SET name = 'Transportes del Valle S.A.S' WHERE id = 2;
 SELECT * FROM tenant_audit WHERE tenant_id = 2;
 ```
+
 Debe aparecer una fila con `field_name = 'name'`, `old_value = 'Transportes del Valle Ltda'` y `new_value = 'Transportes del Valle S.A.S'`.
 
 **13. Auditar específicamente el cambio de estado (valor anterior y nuevo)**
 
-**Qué hace:** es una auditoría dedicada solo al campo `status` (activa/inactiva), separada de la auditoría general del trigger 12, con su propia etiqueta de operación (`CAMBIO_ESTADO`) para poder filtrarla fácilmente.
+**Para qué sirve:** es una auditoría dedicada solo al campo `status` (activa/inactiva), independiente de la auditoría general del trigger 12, con su propia etiqueta de operación (`CAMBIO_ESTADO`) para poder filtrarla con facilidad.
+
 ```sql
 CREATE OR REPLACE FUNCTION fn_auditar_cambio_estado_organizacion()
 RETURNS TRIGGER
@@ -1860,16 +2006,20 @@ CREATE TRIGGER trg_tenants_auditar_estado
 AFTER UPDATE ON tenants
 FOR EACH ROW EXECUTE FUNCTION fn_auditar_cambio_estado_organizacion();
 ```
-**Cómo comprobarlo:**
+
+**Cómo verificarlo:**
+
 ```sql
 UPDATE tenants SET status = FALSE WHERE id = 3;
 SELECT * FROM tenant_audit WHERE tenant_id = 3 AND field_name = 'status';
 ```
+
 Debe aparecer `old_value = 'true'`, `new_value = 'false'`, `operation = 'CAMBIO_ESTADO'`.
 
-**14. Registrar fecha y usuario responsable cuando se modifica una plantilla**
+**14. Registrar fecha y usuario responsable al modificar una plantilla**
 
-Reemplaza al trigger genérico de `updated_at` en `tenanttemplates` (por eso primero se hace `DROP TRIGGER IF EXISTS`), ya que hace ese trabajo y además registra quién hizo el cambio. El "usuario responsable" se lee de una variable de sesión (`app.current_person_id`) que la aplicación debe establecer antes del `UPDATE`.
+Reemplaza al trigger genérico de `updated_at` en `tenanttemplates` (por eso primero se hace `DROP TRIGGER IF EXISTS`), ya que cumple esa misma función y además registra quién hizo el cambio. El "usuario responsable" se toma de una variable de sesión (`app.current_person_id`) que la aplicación debe establecer antes del `UPDATE`.
+
 ```sql
 DROP TRIGGER IF EXISTS trg_tenanttemplates_updated_at ON tenanttemplates;
 
@@ -1893,17 +2043,21 @@ CREATE TRIGGER trg_tenanttemplates_registrar_modificacion
 BEFORE UPDATE ON tenanttemplates
 FOR EACH ROW EXECUTE FUNCTION fn_registrar_modificacion_plantilla();
 ```
-**Cómo comprobarlo:**
+
+**Cómo verificarlo:**
+
 ```sql
 SET app.current_person_id = '2';
 UPDATE tenanttemplates SET status = 'finalizado' WHERE id = 3;
 SELECT id, status, updated_at, updated_by FROM tenanttemplates WHERE id = 3;
 ```
+
 Debe salir `updated_by = 2` y `updated_at` con la hora exacta del `UPDATE`, sin que la instrucción haya mencionado esas dos columnas.
 
-**15. Limpiar bloqueos de edición vencidos**
+**15. Limpiar los bloqueos de edición vencidos**
 
-**Qué hace:** cada vez que alguien va a crear un nuevo bloqueo de edición, aprovecha ese momento para marcar como inactivos (`active = FALSE`) todos los bloqueos que ya vencieron (limpieza "oportunista": no corre solo, se dispara con la siguiente inserción).
+**Para qué sirve:** cada vez que alguien va a crear un nuevo bloqueo de edición, aprovecha ese momento para marcar como inactivos (`active = FALSE`) todos los bloqueos que ya vencieron (limpieza "oportunista": no corre por su cuenta, se activa con la siguiente inserción).
+
 ```sql
 CREATE OR REPLACE FUNCTION fn_limpiar_bloqueos_vencidos()
 RETURNS TRIGGER
@@ -1922,7 +2076,9 @@ CREATE TRIGGER trg_editing_locks_limpiar_vencidos
 BEFORE INSERT ON editing_locks
 FOR EACH ROW EXECUTE FUNCTION fn_limpiar_bloqueos_vencidos();
 ```
-**Cómo comprobarlo:**
+
+**Cómo verificarlo:**
+
 ```sql
 -- 1. Insertar un bloqueo YA vencido (a propósito)
 INSERT INTO editing_locks (tenanttemplate_id, locked_by, locked_at, expires_at, active)
@@ -1935,10 +2091,11 @@ VALUES (2, 1, NOW(), NOW() + INTERVAL '10 minutes', TRUE);
 -- 3. Verificar
 SELECT * FROM editing_locks;
 ```
-El primer bloqueo (el vencido) debe aparecer con `active = f` después del segundo `INSERT`, aunque se insertó con `active = TRUE` — quedó marcado como inactivo por la limpieza que disparó la siguiente inserción.
 
----
+El primer bloqueo (el vencido) debe aparecer con `active = f` después del segundo `INSERT`, aunque se insertó con `active = TRUE`: quedó marcado como inactivo por la limpieza que activó la siguiente inserción.
 
-## Estado final
+------
 
-Las 7 secciones del examen están completas y cada pieza fue probada contra una instancia real de PostgreSQL (creación de tablas, inserción de datos, ejecución de las 68 consultas, y ejecución/disparo de los 15 procedimientos, 8 funciones y 15 triggers, incluyendo los casos que deben fallar).
+## Cierre del examen
+
+Las 7 secciones del examen están completas, y cada pieza fue puesta a prueba contra una instancia real de PostgreSQL: creación de tablas, carga de datos, ejecución de las 68 consultas, y ejecución/activación de los 15 procedimientos, 8 funciones y 15 triggers, incluyendo los casos que deben fallar a propósito.
